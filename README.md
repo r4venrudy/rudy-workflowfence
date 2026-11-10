@@ -54,6 +54,8 @@ go build -trimpath -o bin/workflowfence ./cmd/workflowfence
 python tests/integration.py bin/workflowfence .
 ~~~
 
+Rebuild all three native release archives with python tools/package.py. They include the example workflows and the pinned YAML library notices.
+
 The analyzer reads local .github/workflows YAML files, with 128 directory entries, 256 KiB per workflow, and a 4 MiB aggregate input limit. It rejects duplicate keys, YAML aliases, and anchors. The graph covers job-level calls to local reusable workflows. Remote implementations, composite action bodies, repository settings, runner group membership, arbitrary shell and expression evaluation, and dynamic job conditions are outside the analysis. Token findings describe declared scopes. Caller restrictions, fork downgrades, organization policies, and environments may reduce effective access. The checker does not contact GitHub, resolve references, or execute workflows.
 
 [GitHub Actions secure-use guidance](https://docs.github.com/en/actions/reference/security/secure-use) · [Workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax)

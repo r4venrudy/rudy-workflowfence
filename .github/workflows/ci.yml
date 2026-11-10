@@ -1,0 +1,82 @@
+name: Build and verify
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.13'
+      - run: go mod download
+      - run: go mod verify
+      - run: go vet ./...
+      - run: go test ./...
+      - name: Fuzz YAML parser
+        if: runner.os == 'Linux'
+        run: go test ./internal/audit -run '^$' -fuzz '^FuzzParse$' -fuzztime=12s -parallel=2
+      - name: Run the native CLI and audit this workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin=bin/workflowfence
+          if [[ "$RUNNER_OS" == "Windows" ]]; then bin=bin/workflowfence.exe; fi
+          go build -mod=readonly -trimpath -o "$bin" ./cmd/workflowfence
+          python tests/integration.py "$bin" .
+          "$bin" --root . --fail-on medium
+
+  package:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.13'
+      - run: go mod download
+      - run: go mod verify
+      - run: python tools/package.py
+      - name: Verify archives and run the packaged CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd dist && sha256sum -c SHA256SUMS.txt)
+          mkdir installed
+          tar -xzf dist/workflowfence-0.1.0-preview-linux-x64.tar.gz -C installed
+          python tests/integration.py installed/bin/workflowfence installed
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: workflowfence-release
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
