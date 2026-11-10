@@ -1,0 +1,5 @@
+/bin/
+/dist/
+/publish/
+/installed/
+__pycache__/
