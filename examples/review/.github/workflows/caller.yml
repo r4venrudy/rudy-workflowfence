@@ -1,0 +1,6 @@
+name: Review fixture caller
+on: pull_request_target
+permissions: {}
+jobs:
+  delegate:
+    uses: ./.github/workflows/check.yml

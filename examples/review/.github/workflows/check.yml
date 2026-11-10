@@ -1,0 +1,9 @@
+name: Review fixture callee
+on: workflow_call
+permissions: {}
+jobs:
+  verify:
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@v7
+      - run: printf '%s\n' "${{ github.event.pull_request.title }}"
