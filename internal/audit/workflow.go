@@ -15,11 +15,12 @@ import (
 )
 
 const (
-	workflowDir = ".github/workflows"
-	maxFiles    = 128
-	maxBytes    = 256 * 1024
-	maxNodes    = 32_768
-	maxDepth    = 48
+	workflowDir   = ".github/workflows"
+	maxFiles      = 128
+	maxBytes      = 256 * 1024
+	maxTotalBytes = 4 * 1024 * 1024
+	maxNodes      = 32_768
+	maxDepth      = 48
 )
 
 type Workflow struct {
@@ -56,6 +57,7 @@ func Load(rootPath string) ([]Workflow, error) {
 		return strings.Compare(a.Name(), b.Name())
 	})
 	workflows := make([]Workflow, 0, len(entries))
+	totalBytes := 0
 	for _, entry := range entries {
 		ext := filepath.Ext(entry.Name())
 		if ext != ".yml" && ext != ".yaml" {
@@ -68,6 +70,10 @@ func Load(rootPath string) ([]Workflow, error) {
 		content, err := readWorkflow(root, path)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
+		}
+		totalBytes += len(content)
+		if totalBytes > maxTotalBytes {
+			return nil, fmt.Errorf("workflows exceed %d bytes in aggregate", maxTotalBytes)
 		}
 		workflow, err := Parse(path, content)
 		if err != nil {

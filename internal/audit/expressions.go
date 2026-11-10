@@ -74,7 +74,8 @@ func expressionPaths(expression string) []string {
 			continue
 		}
 		end := wordEnd(expression, i)
-		path := expression[i:end]
+		var path strings.Builder
+		path.WriteString(expression[i:end])
 		i = end
 		for {
 			start := skipSpace(expression, i)
@@ -87,7 +88,8 @@ func expressionPaths(expression string) []string {
 					break
 				}
 				end := wordEnd(expression, part)
-				path += "." + expression[part:end]
+				path.WriteByte('.')
+				path.WriteString(expression[part:end])
 				i = end
 			} else if expression[start] == '[' {
 				part := skipSpace(expression, start+1)
@@ -102,13 +104,14 @@ func expressionPaths(expression string) []string {
 				if name == "" || !letter(name[0]) || wordEnd(name, 0) != len(name) {
 					break
 				}
-				path += "." + name
+				path.WriteByte('.')
+				path.WriteString(name)
 				i = end + 1
 			} else {
 				break
 			}
 		}
-		paths = append(paths, strings.ToLower(path))
+		paths = append(paths, strings.ToLower(path.String()))
 	}
 	return paths
 }
